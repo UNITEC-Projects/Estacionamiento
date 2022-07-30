@@ -10,9 +10,9 @@ LiquidCrystal_I2C LCD(0x27, 16, 2); // Crear objeto del módulo I2C
 
 MFRC522 RFID(SS_PIN, RST_PIN); // Crear objeto del RFID
 byte LecturaUID[4]; // Arreglo para almacenar el UID leído
-byte Usuario1[4]= {0x73, 0x52, 0x2C, 0x1C}; // UID del usuario 1
-byte Usuario2[4]= {0x53, 0x84, 0x0D, 0x94}; // UID del usuario 2
-byte Usuario3[4]= {0xE2, 0xB5, 0x63, 0xFA}; // UID del usuario 3
+byte Usuario1[5]= {0x73, 0x52, 0x2C, 0x1C, 0x00}; // UID y estado del usuario 1
+byte Usuario2[5]= {0x53, 0x84, 0x0D, 0x94, 0x00}; // UID y estado del usuario 2
+byte Usuario3[5]= {0xE2, 0xB5, 0x63, 0xFA, 0x00}; // UID y estado del usuario 3
 
 Servo servoMotor;
 int servoPin = 6;
@@ -48,7 +48,7 @@ void loop() {
 
   /* Si no puede obtener datos de la tarjeta retorna al loop esperando por otra tarjeta */
   if ( ! RFID.PICC_ReadCardSerial() ) 
-    return;         
+    return;
 
   /* Almacena el UID leído */
   for (byte i = 0; i < 4; i++) {
@@ -58,11 +58,29 @@ void loop() {
 
   /* Compara el UID leído los UID registrados */
   if (compararUID(LecturaUID, Usuario1)) {
-    accesoConcedido();
+    if ( nuevoIngreso(Usuario1) ) {
+      Usuario1[4] = 0xFF;
+      accesoConcedido();
+    } else {
+      Usuario1[4] = 0x00;
+      salidaConcedida();
+    }
   } else if (compararUID(LecturaUID, Usuario2)) {
-    accesoConcedido();
+    if ( nuevoIngreso(Usuario2) ) {
+      Usuario2[4] = 0xFF;
+      accesoConcedido();
+    } else {
+      Usuario2[4] = 0x00;
+      salidaConcedida();
+    }
   } else if (compararUID(LecturaUID, Usuario3)) {
-    accesoConcedido();
+    if ( nuevoIngreso(Usuario3) ) {
+      Usuario3[4] = 0xFF;
+      accesoConcedido();
+    } else {
+      Usuario3[4] = 0x00;
+      salidaConcedida();
+    }
   } else {
     accesoDenegado();
   }
@@ -107,6 +125,22 @@ void bienvenida() {
   LCD.print("Presenta tu pase");
 }
 
+/** Muestra en el LCD el texto de salida concedida y levanta la pluma */
+void salidaConcedida() {
+  LCD.clear();
+  LCD.setCursor(0,0);
+  LCD.print("Salida concedida");
+  LCD.setCursor(1,1);
+  LCD.print("Vuelva pronto");
+  
+  servoMotor.write(servoAbierto);
+  delay(retraso);
+  servoMotor.write(servoCerrado);
+  
+  LCD.clear();
+  bienvenida();
+}
+
 /** 
  * Compara el UID de la tarjeta leída con el UID de un usuario registrado. 
  * Si el UID leído corresponde al de un usuario registrado retorna true,
@@ -114,8 +148,19 @@ void bienvenida() {
  */
 boolean compararUID(byte lectura[],byte usuario[]) {
   for (byte i = 0; i < 4; i++) {
-  if (lectura[i] != usuario[i])
+    if (lectura[i] != usuario[i])
+      return false;
+    }
+  return true;
+}
+
+/**  */
+boolean nuevoIngreso(byte usuario[]) {
+  if (usuario[4] == 0x00) {
+    Serial.println("\t Nuevo ingreso");
+    return true;
+  } else {
+    Serial.println("\t Salida");
     return false;
   }
-  return true;
 }
