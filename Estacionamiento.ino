@@ -6,9 +6,9 @@
 #define RST_PIN 9
 #define SS_PIN  10
 
-MFRC522 mfrc522(SS_PIN, RST_PIN); // Crear objeto del RFID
-LiquidCrystal_I2C LCD(0x27, 16, 2);   
+LiquidCrystal_I2C LCD(0x27, 16, 2); // Crear objeto del módulo I2C
 
+MFRC522 RFID(SS_PIN, RST_PIN); // Crear objeto del RFID
 byte LecturaUID[4]; // Arreglo para almacenar el UID leído
 byte Usuario1[4]= {0x73, 0x52, 0x2C, 0x1C}; // UID del usuario 1
 byte Usuario2[4]= {0x53, 0x84, 0x0D, 0x94}; // UID del usuario 2
@@ -16,19 +16,26 @@ byte Usuario3[4]= {0xE2, 0xB5, 0x63, 0xFA}; // UID del usuario 3
 
 Servo servoMotor;
 int servoPin = 6;
-int retraso = 3000;
+int servoCerrado = 0;
+int servoAbierto= 90;
+
+int retraso = 5000;
 
 void setup() {
+  Serial.begin(9600); // Inicializa comunicacion por monitor serie a 9600 bps
+  
   /* Configuración inicial del LCD con I2C */
-  LCD.init();
-  LCD.backlight();
-  LCD.clear();
+  LCD.init();      // Inicializa el modulo I2C
+  LCD.backlight(); // Enciende la Luz del Fondo del LCD
+  LCD.clear();     // Borra el contenido del LCD
 
   /* Configuración inicial del servomotor */
-  Serial.begin(9600);          // inicializa comunicacion por monitor serie a 9600 bps
-  servoMotor.attach(servoPin); // Servo asociado al pin 6 y lleva a 170 grados
-  SPI.begin();                 // inicializa bus SPI
-  mfrc522.PCD_Init();          // inicializa modulo lector
+  servoMotor.attach(servoPin); // Servo asociado al pin asignado a la variable servoPin
+  servoMotor.write(servoCerrado);         // Servo colocado a 0 grados
+
+  /* Configuración inicial del RFID */
+  RFID.PCD_Init();  // Inicializa modulo RFID
+  SPI.begin();      // Inicializa bus SPI
 
   bienvenida();
 }
@@ -36,17 +43,17 @@ void setup() {
 void loop() {
   
   /* Si no hay una tarjeta presente retorna al loop esperando por una tarjeta */
-  if ( ! mfrc522.PICC_IsNewCardPresent() ) 
+  if ( ! RFID.PICC_IsNewCardPresent() ) 
     return;
 
   /* Si no puede obtener datos de la tarjeta retorna al loop esperando por otra tarjeta */
-  if ( ! mfrc522.PICC_ReadCardSerial() ) 
+  if ( ! RFID.PICC_ReadCardSerial() ) 
     return;         
 
-  /* Almacena el UID leido */
+  /* Almacena el UID leído */
   for (byte i = 0; i < 4; i++) {
-    Serial.print(mfrc522.uid.uidByte[i], HEX);
-    LecturaUID[i]=mfrc522.uid.uidByte[i];
+    Serial.print(RFID.uid.uidByte[i], HEX);
+    LecturaUID[i] = RFID.uid.uidByte[i];
   }
 
   /* Compara el UID leído los UID registrados */
@@ -60,7 +67,7 @@ void loop() {
     accesoDenegado();
   }
   
-  mfrc522.PICC_HaltA(); // detiene comunicacion con tarjeta    
+  RFID.PICC_HaltA(); // Detiene comunicacion con tarjeta    
 }
 
 /** Muestra en el LCD el texto de acceso concedido y levanta la pluma */
@@ -68,13 +75,13 @@ void accesoConcedido() {
   LCD.clear();
   LCD.setCursor(0,0);
   LCD.print("Acceso concedido");
-  LCD.setCursor(4,1);
-  LCD.print("Buen dia");
+  LCD.setCursor(1,1);
+  LCD.print("Puede ingresar");
   
-  servoMotor.write(0);
+  servoMotor.write(servoAbierto);
   delay(retraso);
-  servoMotor.write(90);
-
+  servoMotor.write(servoCerrado);
+  
   LCD.clear();
   bienvenida();
 }
@@ -92,7 +99,7 @@ void accesoDenegado() {
   bienvenida();
 }
 
-/** Muestra en el LCD texto estadar de bienvenida */
+/** Muestra en el LCD el texto de bienvenida */
 void bienvenida() {
   LCD.setCursor(3,0);
   LCD.print("Bienvenido");
@@ -106,9 +113,9 @@ void bienvenida() {
  * de lo contrario retornará false.
  */
 boolean compararUID(byte lectura[],byte usuario[]) {
-  for (byte i=0; i < 4; i++) {
+  for (byte i = 0; i < 4; i++) {
   if (lectura[i] != usuario[i])
-    return(false);
+    return false;
   }
-  return(true);
+  return true;
 }
