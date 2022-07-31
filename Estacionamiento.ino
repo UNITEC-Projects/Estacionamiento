@@ -19,6 +19,7 @@ int servoPin = 6;
 int servoCerrado = 0;
 int servoAbierto= 90;
 
+int lugaresDisponibles = 2;
 int retraso = 5000;
 
 void setup() {
@@ -58,27 +59,33 @@ void loop() {
 
   /* Compara el UID leído los UID registrados */
   if (compararUID(LecturaUID, Usuario1)) {
-    if ( nuevoIngreso(Usuario1) ) {
+    if ( nuevoIngreso(Usuario1) && lugaresDisponibles > 0 ) {
       Usuario1[4] = 0xFF;
+      lugaresDisponibles --;
       accesoConcedido();
-    } else {
+    } else if ( ! nuevoIngreso(Usuario1) ) {
       Usuario1[4] = 0x00;
+      lugaresDisponibles ++;
       salidaConcedida();
     }
   } else if (compararUID(LecturaUID, Usuario2)) {
-    if ( nuevoIngreso(Usuario2) ) {
+    if ( nuevoIngreso(Usuario2) && lugaresDisponibles > 0 ) {
       Usuario2[4] = 0xFF;
+      lugaresDisponibles --;
       accesoConcedido();
-    } else {
+    } else if ( ! nuevoIngreso(Usuario2) ) {
       Usuario2[4] = 0x00;
+      lugaresDisponibles ++;
       salidaConcedida();
     }
   } else if (compararUID(LecturaUID, Usuario3)) {
-    if ( nuevoIngreso(Usuario3) ) {
+    if ( nuevoIngreso(Usuario3) && lugaresDisponibles > 0 ) {
       Usuario3[4] = 0xFF;
+      lugaresDisponibles --;
       accesoConcedido();
-    } else {
+    } else if ( ! nuevoIngreso(Usuario3) ) {
       Usuario3[4] = 0x00;
+      lugaresDisponibles ++;
       salidaConcedida();
     }
   } else {
@@ -99,9 +106,8 @@ void accesoConcedido() {
   servoMotor.write(servoAbierto);
   delay(retraso);
   servoMotor.write(servoCerrado);
-  
-  LCD.clear();
-  bienvenida();
+
+  (lugaresDisponibles > 0) ? bienvenida() : lugaresAgotados() ;
 }
 
 /** Muestra en el LCD el texto de acceso denegado */
@@ -112,17 +118,26 @@ void accesoDenegado() {
   LCD.setCursor(1,1);
   LCD.print("Pase invalido");
   delay(retraso);
-  
-  LCD.clear();
-  bienvenida();
+
+  (lugaresDisponibles > 0) ? bienvenida() : lugaresAgotados() ;
 }
 
 /** Muestra en el LCD el texto de bienvenida */
 void bienvenida() {
+  LCD.clear();
   LCD.setCursor(3,0);
   LCD.print("Bienvenido");
   LCD.setCursor(0,1);
   LCD.print("Presenta tu pase");
+}
+
+/** Muestra en el LCD el texto de de lugares agotados */
+void lugaresAgotados() {
+  LCD.clear();
+  LCD.setCursor(0,0);
+  LCD.print("Lugares agotados");
+  LCD.setCursor(2,1);
+  LCD.print("Lo sentimos");
 }
 
 /** Muestra en el LCD el texto de salida concedida y levanta la pluma */
@@ -136,9 +151,8 @@ void salidaConcedida() {
   servoMotor.write(servoAbierto);
   delay(retraso);
   servoMotor.write(servoCerrado);
-  
-  LCD.clear();
-  bienvenida();
+
+  (lugaresDisponibles > 0) ? bienvenida() : lugaresAgotados() ;
 }
 
 /** 
@@ -158,9 +172,11 @@ boolean compararUID(byte lectura[],byte usuario[]) {
 boolean nuevoIngreso(byte usuario[]) {
   if (usuario[4] == 0x00) {
     Serial.println("\t Nuevo ingreso");
+    Serial.println("Lugares disponibles" + lugaresDisponibles);
     return true;
   } else {
     Serial.println("\t Salida");
+    Serial.println("Lugares disponibles" + lugaresDisponibles);
     return false;
   }
 }
