@@ -16,7 +16,7 @@ byte Usuario3[5]= {0xE2, 0xB5, 0x63, 0xFA, 0x00}; // UID y estado del usuario 3
 
 Servo servoMotor;
 int servoPin = 6;
-int servoCerrado = 0;
+int servoCerrado = 15;
 int servoAbierto= 90;
 
 int lugaresDisponibles = 2;
@@ -31,8 +31,8 @@ void setup() {
   LCD.clear();     // Borra el contenido del LCD
 
   /* Configuración inicial del servomotor */
-  servoMotor.attach(servoPin); // Servo asociado al pin asignado a la variable servoPin
-  servoMotor.write(servoCerrado);         // Servo colocado a 0 grados
+  servoMotor.attach(servoPin);    // Servo asociado al pin asignado a la variable servoPin
+  servoMotor.write(servoCerrado); // Servo colocado a 0 grados
 
   /* Configuración inicial del RFID */
   RFID.PCD_Init();  // Inicializa modulo RFID
