@@ -15,15 +15,22 @@ byte Usuario2[5]= {0x53, 0x84, 0x0D, 0x94, 0x00}; // UID y estado del usuario 2
 byte Usuario3[5]= {0xE2, 0xB5, 0x63, 0xFA, 0x00}; // UID y estado del usuario 3
 
 Servo servoMotor;
-int servoPin = 6;
+int servoPin = 2;
 int servoCerrado = 15;
 int servoAbierto= 90;
+
+int ledVerde = 5;
+int ledRojo = 6;
 
 int lugaresDisponibles = 2;
 int retraso = 5000;
 
 void setup() {
   Serial.begin(9600); // Inicializa comunicacion por monitor serie a 9600 bps
+
+  /* Configuración de los Leds */
+  pinMode(ledVerde, OUTPUT);
+  pinMode(ledRojo, OUTPUT);
   
   /* Configuración inicial del LCD con I2C */
   LCD.init();      // Inicializa el modulo I2C
@@ -95,35 +102,47 @@ void loop() {
   RFID.PICC_HaltA(); // Detiene comunicacion con tarjeta    
 }
 
-/** Muestra en el LCD el texto de acceso concedido y levanta la pluma */
+/** Muestra en el LCD el texto de acceso concedido, levanta la pluma y enciende el led verde */
 void accesoConcedido() {
   LCD.clear();
   LCD.setCursor(0,0);
   LCD.print("Acceso concedido");
   LCD.setCursor(1,1);
   LCD.print("Puede ingresar");
-  
+
+  digitalWrite(ledVerde, HIGH);
   servoMotor.write(servoAbierto);
   delay(retraso);
+  digitalWrite(ledVerde, LOW);
   servoMotor.write(servoCerrado);
 
   (lugaresDisponibles > 0) ? bienvenida() : lugaresAgotados() ;
 }
 
-/** Muestra en el LCD el texto de acceso denegado */
+/** 
+ * Muestra en el LCD el texto de acceso denegado 
+ * y enciende el led rojo 
+ */
 void accesoDenegado() {
   LCD.clear();
   LCD.setCursor(0,0);
   LCD.print("Acceso denegado");
   LCD.setCursor(1,1);
   LCD.print("Pase invalido");
+  
+  digitalWrite(ledRojo, HIGH);
   delay(retraso);
+  digitalWrite(ledRojo, LOW);
 
   (lugaresDisponibles > 0) ? bienvenida() : lugaresAgotados() ;
 }
 
-/** Muestra en el LCD el texto de bienvenida */
+/** 
+ * Muestra en el LCD el texto de bienvenida 
+ */
 void bienvenida() {
+  digitalWrite(ledRojo, LOW);
+  
   LCD.clear();
   LCD.setCursor(3,0);
   LCD.print("Bienvenido");
@@ -131,25 +150,36 @@ void bienvenida() {
   LCD.print("Presenta tu pase");
 }
 
-/** Muestra en el LCD el texto de de lugares agotados */
+/** 
+ * Muestra en el LCD el texto de de lugares agotados 
+ */
 void lugaresAgotados() {
   LCD.clear();
   LCD.setCursor(0,0);
   LCD.print("Lugares agotados");
   LCD.setCursor(2,1);
   LCD.print("Lo sentimos");
+  
+  digitalWrite(ledRojo, HIGH);
 }
 
-/** Muestra en el LCD el texto de salida concedida y levanta la pluma */
+/** 
+ * Muestra en el LCD el texto de salida concedida, levanta la pluma 
+ * y enciende el led verde 
+ */
 void salidaConcedida() {
+  digitalWrite(ledRojo, LOW);
+  
   LCD.clear();
   LCD.setCursor(0,0);
   LCD.print("Salida concedida");
   LCD.setCursor(1,1);
   LCD.print("Vuelva pronto");
-  
+
+  digitalWrite(ledVerde, HIGH);
   servoMotor.write(servoAbierto);
   delay(retraso);
+  digitalWrite(ledVerde, LOW);
   servoMotor.write(servoCerrado);
 
   (lugaresDisponibles > 0) ? bienvenida() : lugaresAgotados() ;
@@ -168,15 +198,18 @@ boolean compararUID(byte lectura[],byte usuario[]) {
   return true;
 }
 
-/**  */
+/** 
+ * Se encarga de saber si el UID del pase escaneado corresponde a un 
+ * nuevo ingreso o a una salida.
+ * Retorna true si corresponde a un nuevo ingreso.
+ * Retorna false si corresponde a una salida
+ */
 boolean nuevoIngreso(byte usuario[]) {
   if (usuario[4] == 0x00) {
     Serial.println("\t Nuevo ingreso");
-    Serial.println("Lugares disponibles" + lugaresDisponibles);
     return true;
   } else {
     Serial.println("\t Salida");
-    Serial.println("Lugares disponibles" + lugaresDisponibles);
     return false;
   }
 }
