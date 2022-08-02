@@ -6,9 +6,9 @@
 #define RST_PIN 9
 #define SS_PIN  10
 
-LiquidCrystal_I2C LCD(0x27, 16, 2); // Crear objeto del módulo I2C
+LiquidCrystal_I2C LCD(0x27, 16, 2);
 
-MFRC522 RFID(SS_PIN, RST_PIN); // Crear objeto del RFID
+MFRC522 RFID(SS_PIN, RST_PIN);
 byte LecturaUID[4]; // Arreglo para almacenar el UID leído
 byte Usuario1[5]= {0x73, 0x52, 0x2C, 0x1C, 0x00}; // UID y estado del usuario 1
 byte Usuario2[5]= {0x53, 0x84, 0x0D, 0x94, 0x00}; // UID y estado del usuario 2
@@ -26,7 +26,6 @@ int lugaresDisponibles = 2;
 int retraso = 5000;
 
 void setup() {
-  Serial.begin(9600); // Inicializa comunicacion por monitor serie a 9600 bps
 
   /* Configuración de los Leds */
   pinMode(ledVerde, OUTPUT);
@@ -98,37 +97,25 @@ void loop() {
   } else {
     accesoDenegado();
   }
-  
-  RFID.PICC_HaltA(); // Detiene comunicacion con tarjeta    
 }
 
-/** Muestra en el LCD el texto de acceso concedido, levanta la pluma y enciende el led verde */
+/** 
+ * Muestra en el LCD el texto de acceso concedido y levanta la pluma 
+ */
 void accesoConcedido() {
-  LCD.clear();
-  LCD.setCursor(0,0);
-  LCD.print("Acceso concedido");
-  LCD.setCursor(1,1);
-  LCD.print("Puede ingresar");
+  mostrarMensajeEnLcd("Acceso concedido", 0, 0, "Puede ingresar", 1, 1);
 
-  digitalWrite(ledVerde, HIGH);
-  servoMotor.write(servoAbierto);
-  delay(retraso);
-  digitalWrite(ledVerde, LOW);
-  servoMotor.write(servoCerrado);
+  levantarPluma();
 
   (lugaresDisponibles > 0) ? bienvenida() : lugaresAgotados() ;
 }
 
 /** 
- * Muestra en el LCD el texto de acceso denegado 
- * y enciende el led rojo 
+ * Muestra en el LCD el texto de acceso denegado y enciende el led rojo 
  */
 void accesoDenegado() {
-  LCD.clear();
-  LCD.setCursor(0,0);
-  LCD.print("Acceso denegado");
-  LCD.setCursor(1,1);
-  LCD.print("Pase invalido");
+
+  mostrarMensajeEnLcd("Acceso denegado", 0, 0, "Pase invalido", 1, 1);
   
   digitalWrite(ledRojo, HIGH);
   delay(retraso);
@@ -142,24 +129,14 @@ void accesoDenegado() {
  */
 void bienvenida() {
   digitalWrite(ledRojo, LOW);
-  
-  LCD.clear();
-  LCD.setCursor(3,0);
-  LCD.print("Bienvenido");
-  LCD.setCursor(0,1);
-  LCD.print("Presenta tu pase");
+  mostrarMensajeEnLcd("Bienvenido", 3, 0, "Presenta tu pase", 0, 1);
 }
 
 /** 
  * Muestra en el LCD el texto de de lugares agotados 
  */
 void lugaresAgotados() {
-  LCD.clear();
-  LCD.setCursor(0,0);
-  LCD.print("Lugares agotados");
-  LCD.setCursor(2,1);
-  LCD.print("Lo sentimos");
-  
+  mostrarMensajeEnLcd("Lugares agotados", 0, 0, "Lo sentimos", 2, 1);
   digitalWrite(ledRojo, HIGH);
 }
 
@@ -169,20 +146,43 @@ void lugaresAgotados() {
  */
 void salidaConcedida() {
   digitalWrite(ledRojo, LOW);
-  
-  LCD.clear();
-  LCD.setCursor(0,0);
-  LCD.print("Salida concedida");
-  LCD.setCursor(1,1);
-  LCD.print("Vuelva pronto");
 
+  mostrarMensajeEnLcd("Salida concedida", 0, 0, "Vuelva pronto", 1, 1);
+  levantarPluma();
+  
+  (lugaresDisponibles > 0) ? bienvenida() : lugaresAgotados() ;
+}
+
+/** 
+ * Levanta la pluma y mantiene encendido el led verde por el momento 
+ * que está levantada la pluma.
+ */
+void levantarPluma() {
   digitalWrite(ledVerde, HIGH);
   servoMotor.write(servoAbierto);
   delay(retraso);
   digitalWrite(ledVerde, LOW);
-  servoMotor.write(servoCerrado);
+  servoMotor.write(servoCerrado); 
+}
 
-  (lugaresDisponibles > 0) ? bienvenida() : lugaresAgotados() ;
+/** 
+ * Se encarga de mostrar el texto en el LCD.
+ * Soporta 2 mensajes correspondientes a las dos filas que dispone el LCD.
+ *
+ * Recibe los siguientes parametros: 
+ * @param m1    : Mensaje 1
+ * @param colm1 : Posición de la columna del mensaje 1
+ * @param rowm1 : Posición de la fila del mensaje 1
+ * @param m2    : Mensaje 2
+ * @param colm2 : Posición de la columna del mensaje 2
+ * @param rowm2 : Posición de la fila del mensaje 2
+ */
+void mostrarMensajeEnLcd(String m1, int colm1, int rowm1, String m2, int colm2, int rowm2) {
+  LCD.clear();
+  LCD.setCursor(colm1,rowm1);
+  LCD.print(m1);
+  LCD.setCursor(colm2,rowm2);
+  LCD.print(m2);
 }
 
 /** 
@@ -194,7 +194,7 @@ boolean compararUID(byte lectura[],byte usuario[]) {
   for (byte i = 0; i < 4; i++) {
     if (lectura[i] != usuario[i])
       return false;
-    }
+  }
   return true;
 }
 
@@ -206,10 +206,8 @@ boolean compararUID(byte lectura[],byte usuario[]) {
  */
 boolean nuevoIngreso(byte usuario[]) {
   if (usuario[4] == 0x00) {
-    Serial.println("\t Nuevo ingreso");
     return true;
-  } else {
-    Serial.println("\t Salida");
-    return false;
   }
+  
+  return false;
 }
