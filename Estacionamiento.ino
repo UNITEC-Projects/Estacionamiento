@@ -16,14 +16,14 @@ byte Usuario3[5]= {0xE2, 0xB5, 0x63, 0xFA, 0x00}; // UID y estado del usuario 3
 
 Servo servoMotor;
 int servoPin = 2;
-int servoCerrado = 15;
+int servoCerrado = 170;
 int servoAbierto= 90;
 
 int ledVerde = 5;
 int ledRojo = 6;
 
 int lugaresDisponibles = 2;
-int retraso = 5000;
+int retraso = 3000;
 
 void setup() {
 
@@ -41,8 +41,8 @@ void setup() {
   servoMotor.write(servoCerrado); // Servo colocado a 0 grados
 
   /* Configuración inicial del RFID */
-  RFID.PCD_Init();  // Inicializa modulo RFID
   SPI.begin();      // Inicializa bus SPI
+  RFID.PCD_Init();  // Inicializa modulo RFID
 
   bienvenida();
 }
@@ -50,12 +50,14 @@ void setup() {
 void loop() {
   
   /* Si no hay una tarjeta presente retorna al loop esperando por una tarjeta */
-  if ( ! RFID.PICC_IsNewCardPresent() ) 
+  if ( ! RFID.PICC_IsNewCardPresent() ) {
     return;
+  }
 
   /* Si no puede obtener datos de la tarjeta retorna al loop esperando por otra tarjeta */
-  if ( ! RFID.PICC_ReadCardSerial() ) 
+  if ( ! RFID.PICC_ReadCardSerial() ) {
     return;
+  }
 
   /* Almacena el UID leído */
   for (byte i = 0; i < 4; i++) {
